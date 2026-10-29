@@ -8,14 +8,27 @@ import { ApiError } from "./envelope";
 import type { Repo } from "./repo";
 import { manifestData } from "./manifest";
 
-export const MCP_PROTOCOL_VERSION = "2025-06-18";
+/** Newest revision spoken; `server/discover` leads with it. 2026-07-28
+ *  dropped the initialize handshake for per-request `_meta`; the two older
+ *  revisions keep `initialize`. Both doors stay open, as on api.assemble.film. */
+export const MCP_PROTOCOL_VERSION = "2026-07-28";
+const SUPPORTED_PROTOCOL_VERSIONS = [MCP_PROTOCOL_VERSION, "2025-11-25", "2025-06-18"] as const;
+const UNSUPPORTED_PROTOCOL_VERSION = -32022;
+const META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion";
+const META_SERVER_INFO = "io.modelcontextprotocol/serverInfo";
+const LIST_TTL_MS = 3_600_000;
+
+function negotiatedVersion(params: Record<string, unknown> | undefined): string {
+  const asked = typeof params?.protocolVersion === "string" ? params.protocolVersion : "";
+  return (SUPPORTED_PROTOCOL_VERSIONS as readonly string[]).includes(asked) ? asked : "2025-06-18";
+}
 
 type JsonRpcId = string | number | null;
 interface JsonRpcRequest {
   jsonrpc: "2.0";
   id?: JsonRpcId;
   method: string;
-  params?: Record<string, unknown>;
+  params?: Record<string, unknown> & { _meta?: Record<string, unknown> };
 }
 
 const ok = (id: JsonRpcId, result: unknown) => ({ jsonrpc: "2.0", id, result });
@@ -186,15 +199,34 @@ export async function handleMcp(env: Env, repo: Repo, req: Request): Promise<Res
     }
     const id = r.id ?? null;
     const isNotification = r.id === undefined;
+    const serverInfo = { name: `filmgraph-node:${env.NODE_ID}`, version: "0.1.0" };
+    const instructions = `FilmGraph node "${env.NODE_ID}" (${env.NODE_NAME}), layer ${env.NODE_LAYER}. Films are addressed by UUID, slug (title-year) or prefixed external id (tmdb:123). Call node_info to see which node and edge types this node serves; absent types are not served, not empty.`;
+    const metaVersion = r.params?._meta?.[META_PROTOCOL_VERSION];
+    if (typeof metaVersion === "string" && !(SUPPORTED_PROTOCOL_VERSIONS as readonly string[]).includes(metaVersion)) {
+      if (!isNotification) responses.push(err(id, UNSUPPORTED_PROTOCOL_VERSION, `Unsupported protocol version ${metaVersion}`, { supportedVersions: SUPPORTED_PROTOCOL_VERSIONS }));
+      continue;
+    }
     try {
       switch (r.method) {
+        case "server/discover":
+          responses.push(
+            ok(id, {
+              supportedVersions: SUPPORTED_PROTOCOL_VERSIONS,
+              capabilities: { tools: { listChanged: false } },
+              instructions,
+              ttlMs: LIST_TTL_MS,
+              cacheScope: "private",
+              _meta: { [META_SERVER_INFO]: serverInfo },
+            }),
+          );
+          break;
         case "initialize":
           responses.push(
             ok(id, {
-              protocolVersion: MCP_PROTOCOL_VERSION,
+              protocolVersion: negotiatedVersion(r.params),
               capabilities: { tools: { listChanged: false } },
-              serverInfo: { name: `filmgraph-node:${env.NODE_ID}`, version: "0.1.0" },
-              instructions: `FilmGraph node "${env.NODE_ID}" (${env.NODE_NAME}), layer ${env.NODE_LAYER}. Films are addressed by UUID, slug (title-year) or prefixed external id (tmdb:123). Call node_info to see which node and edge types this node serves; absent types are not served, not empty.`,
+              serverInfo,
+              instructions,
             }),
           );
           break;
@@ -203,7 +235,7 @@ export async function handleMcp(env: Env, repo: Repo, req: Request): Promise<Res
           break;
         case "tools/list": {
           const { node_types } = await repo.servedTypes();
-          responses.push(ok(id, { tools: toolDefinitions(env, node_types.includes("Venue")) }));
+          responses.push(ok(id, { tools: toolDefinitions(env, node_types.includes("Venue")), ttlMs: LIST_TTL_MS, cacheScope: "private" }));
           break;
         }
         case "tools/call": {

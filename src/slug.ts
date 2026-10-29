@@ -7,6 +7,7 @@ const PREFIXED_RE = /^([a-z]+):(.+)$/;
 export function filmSlug(title: string, year: number, suffix?: number): string {
   let t = title.replace(/&/g, " and ").replace(/['’]/g, "");
   t = t.normalize("NFKD").replace(/[̀-ͯ]/g, "");
+  // eslint-disable-next-line no-control-regex -- deliberately strip everything outside ASCII
   t = t.replace(/[^\x00-\x7F]/g, "");
   t = t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   if (!t) throw new Error("title produced an empty slug");
