@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      # Conformance: boot the Worker locally with the example data and run the
+      # FilmGraph repo's suite against it.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch conformance suite
+        run: git clone --depth 1 https://github.com/jamesfranklin/FilmGraph /tmp/filmgraph && pip install -q pytest httpx jsonschema
+      - name: Load example data and issue a key
+        id: key
+        run: |
+          npm run db:init
+          npm run load -- data/example
+          KEY=$(npm run -s issue-key -- --label ci | grep -o 'fg_[A-Za-z0-9_-]*')
+          echo "key=$KEY" >> "$GITHUB_OUTPUT"
+      - name: Start wrangler dev
+        run: |
+          (npx wrangler dev --port 8787 --ip 127.0.0.1 > wrangler.log 2>&1 &)
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8787/.well-known/filmgraph >/dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:8787/.well-known/filmgraph
+      - name: Conformance
+        env:
+          FILMGRAPH_NODE_URL: http://127.0.0.1:8787
+          FILMGRAPH_NODE_KEY: ${{ steps.key.outputs.key }}
+          FILMGRAPH_SAMPLE_FILM: the-end-of-the-line-2009
+        run: cd /tmp/filmgraph && pytest conformance/ -q
+      - if: failure()
+        run: cat wrangler.log

@@ -1,0 +1,261 @@
+{
+  "SCREENED_AT": {
+    "source": ["Film"],
+    "target": ["Festival"],
+    "reserved": false,
+    "properties": {
+      "type": "object",
+      "required": ["year"],
+      "additionalProperties": false,
+      "properties": {
+        "year": { "type": "integer" },
+        "section": { "type": "string", "enum": ["competition", "sidebar", "special", "retrospective", "market"] },
+        "premiere_status": { "type": "string", "enum": ["world", "international", "european", "regional", "none"] },
+        "award_won": { "type": "string" }
+      }
+    }
+  },
+  "NOMINATED_FOR": {
+    "source": ["Film"],
+    "target": ["AwardCategory"],
+    "reserved": false,
+    "properties": {
+      "type": "object",
+      "required": ["year", "ceremony_year"],
+      "additionalProperties": false,
+      "properties": {
+        "year": { "type": "integer" },
+        "ceremony_year": { "type": "integer" }
+      }
+    }
+  },
+  "WON": {
+    "source": ["Film"],
+    "target": ["AwardCategory"],
+    "reserved": false,
+    "properties": {
+      "type": "object",
+      "required": ["year", "ceremony_year"],
+      "additionalProperties": false,
+      "properties": {
+        "year": { "type": "integer" },
+        "ceremony_year": { "type": "integer" }
+      }
+    }
+  },
+  "DISTRIBUTED_BY": {
+    "source": ["Film"],
+    "target": ["Distributor"],
+    "reserved": false,
+    "properties": {
+      "type": "object",
+      "required": ["territory"],
+      "additionalProperties": false,
+      "properties": {
+        "territory": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "release_date": { "type": "string", "format": "date" },
+        "deal_type": { "type": "string", "enum": ["acquisition", "negative_pickup", "output", "self"] }
+      }
+    }
+  },
+  "WORKED_ON": {
+    "source": ["Practitioner"],
+    "target": ["Film"],
+    "reserved": false,
+    "properties": {
+      "type": "object",
+      "required": ["role"],
+      "additionalProperties": false,
+      "properties": {
+        "role": { "type": "string" },
+        "year": { "type": "integer" },
+        "territory": { "type": "string", "pattern": "^[A-Z]{2}$" }
+      }
+    }
+  },
+  "FUNDED": {
+    "source": ["Organisation"],
+    "target": ["Film"],
+    "reserved": false,
+    "properties": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {
+        "funding_type": { "type": "string", "enum": ["production", "p_and_a", "impact", "gap"] },
+        "year": { "type": "integer" }
+      }
+    }
+  },
+  "REPRESENTED_BY": {
+    "source": ["Film"],
+    "target": ["Organisation"],
+    "reserved": false,
+    "properties": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {
+        "role": { "type": "string", "enum": ["sales_agent", "pr", "legal"] },
+        "territory": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "year": { "type": "integer" }
+      }
+    }
+  },
+  "MEMBER_OF": {
+    "source": ["Practitioner"],
+    "target": ["Organisation"],
+    "reserved": false,
+    "properties": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {
+        "start_year": { "type": "integer" },
+        "end_year": { "type": "integer" }
+      }
+    }
+  },
+  "EMPLOYED_BY": {
+    "source": ["Practitioner"],
+    "target": ["Distributor"],
+    "reserved": false,
+    "properties": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {
+        "role": { "type": "string" },
+        "start_year": { "type": "integer" },
+        "end_year": { "type": "integer" }
+      }
+    }
+  },
+  "ACQUIRED_FROM": {
+    "source": ["Distributor"],
+    "target": ["Festival"],
+    "reserved": false,
+    "derived": true,
+    "properties": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {
+        "year": { "type": "integer" },
+        "territory": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "film_id": { "type": "string", "format": "uuid" }
+      }
+    }
+  },
+  "REVIEWED": {
+    "source": ["Film"],
+    "target": ["Publication"],
+    "reserved": false,
+    "properties": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "sentiment": { "type": "string", "enum": ["positive", "mixed", "negative"] },
+        "review_date": { "type": "string", "format": "date" }
+      }
+    }
+  },
+  "AVAILABLE_ON": {
+    "source": ["Film"],
+    "target": ["Platform"],
+    "reserved": false,
+    "properties": {
+      "type": "object",
+      "required": ["territory", "is_active"],
+      "additionalProperties": false,
+      "properties": {
+        "link_type": { "type": "string", "enum": ["stream", "rent", "buy", "free"] },
+        "territory": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "added_date": { "type": "string", "format": "date" },
+        "is_active": { "type": "boolean" }
+      }
+    }
+  },
+  "LOCATED_IN": {
+    "source": ["Venue"],
+    "target": ["Territory"],
+    "reserved": false,
+    "properties": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {}
+    }
+  },
+  "CO_PROGRAMMES_WITH": {
+    "source": ["Venue"],
+    "target": ["Venue"],
+    "reserved": false,
+    "bidirectional": true,
+    "derived": true,
+    "properties": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {
+        "affinity_score": { "type": "number" },
+        "film_overlap_count": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "SIMILAR_TO": {
+    "source": ["Film"],
+    "target": ["Film"],
+    "reserved": false,
+    "bidirectional": true,
+    "derived": true,
+    "properties": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {
+        "combined_similarity": { "type": "number" }
+      }
+    }
+  },
+  "FESTIVAL_PIPELINE": {
+    "source": ["Festival"],
+    "target": ["Territory"],
+    "reserved": false,
+    "derived": true,
+    "properties": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {
+        "pickup_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "avg_months_to_theatrical": { "type": "number", "minimum": 0 }
+      }
+    }
+  },
+  "EXHIBITED_AT": {
+    "source": ["Film"],
+    "target": ["Venue"],
+    "reserved": true,
+    "properties": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": true,
+      "properties": {}
+    }
+  },
+  "SHAPE_MATCHES": {
+    "source": ["Film"],
+    "target": ["Film"],
+    "reserved": true,
+    "bidirectional": true,
+    "properties": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": true,
+      "properties": {}
+    }
+  }
+}

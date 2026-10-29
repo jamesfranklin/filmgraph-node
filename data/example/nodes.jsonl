@@ -1,0 +1,4 @@
+{"_type": "Organisation", "id": "0b1e7f3a-1111-4aaa-8bbb-000000000001", "name": "Doc Society", "type": "funding_body", "territory": ["GB"], "website": "https://docsociety.org"}
+{"_type": "Festival", "id": "0b1e7f3a-1111-4aaa-8bbb-000000000002", "name": "Sheffield DocFest", "city": "Sheffield", "country": "GB", "tier": "major", "festival_type": "documentary", "website": "https://www.sheffdocfest.com"}
+{"_type": "Venue", "id": "0b1e7f3a-1111-4aaa-8bbb-000000000003", "name": "Watershed", "city": "Bristol", "country": "GB", "is_independent": true, "website": "https://www.watershed.co.uk"}
+{"_type": "Distributor", "id": "0b1e7f3a-1111-4aaa-8bbb-000000000004", "name": "Dogwoof", "territory": ["GB"], "website": "https://dogwoof.com"}

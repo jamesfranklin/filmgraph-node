@@ -1,0 +1,211 @@
+{
+  "Film": {
+    "type": "object",
+    "required": ["id", "slug", "title", "year"],
+    "additionalProperties": false,
+    "properties": {
+      "id": { "type": "string", "format": "uuid" },
+      "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*-[0-9]{4}(?:-[0-9]+)?$" },
+      "external_ids": {
+        "type": "object",
+        "additionalProperties": { "type": ["string", "integer"] },
+        "properties": {
+          "tmdb": { "type": "integer" },
+          "imdb": { "type": "string", "pattern": "^tt[0-9]+$" },
+          "letterboxd": { "type": "string" },
+          "wikidata": { "type": "string", "pattern": "^Q[0-9]+$" },
+          "eidr": { "type": "string" },
+          "mx": { "type": "integer" }
+        }
+      },
+      "tmdb_id": { "type": "integer" },
+      "imdb_id": { "type": "string" },
+      "title": { "type": "string", "minLength": 1 },
+      "title_en": { "type": ["string", "null"] },
+      "original_title": { "type": "string" },
+      "year": { "type": "integer", "minimum": 1888 },
+      "origin_country": { "type": "array", "items": { "type": "string", "pattern": "^[A-Z]{2}$" } },
+      "language": { "type": "string" },
+      "genres": { "type": "array", "items": { "type": "string" } },
+      "budget_tier": { "type": "string", "enum": ["low", "mid", "high"] },
+      "runtime_mins": { "type": "integer", "minimum": 0 },
+      "keywords": { "type": "array", "items": { "type": "string" } },
+      "vote_average": { "type": "number" },
+      "vote_count": { "type": "integer", "minimum": 0 },
+      "letterboxd_rating": { "type": "number" },
+      "letterboxd_watchlist_count": { "type": "integer", "minimum": 0 },
+      "_source": { "type": "string" }
+    }
+  },
+  "Venue": {
+    "type": "object",
+    "required": ["id", "name", "city", "country"],
+    "additionalProperties": false,
+    "properties": {
+      "id": { "type": "string", "format": "uuid" },
+      "name": { "type": "string", "minLength": 1 },
+      "city": { "type": "string", "minLength": 1 },
+      "country": { "type": "string", "pattern": "^[A-Z]{2}$" },
+      "address": { "type": "string" },
+      "state": { "type": "string" },
+      "postal_code": { "type": "string" },
+      "chain_id": { "type": "string" },
+      "is_independent": { "type": "boolean" },
+      "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+      "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+      "website": { "type": "string" },
+      "_source": { "type": "string" }
+    }
+  },
+  "Festival": {
+    "type": "object",
+    "required": ["id", "name", "city", "country", "tier", "festival_type"],
+    "additionalProperties": false,
+    "properties": {
+      "id": { "type": "string", "format": "uuid" },
+      "name": { "type": "string", "minLength": 1 },
+      "city": { "type": "string", "minLength": 1 },
+      "country": { "type": "string", "pattern": "^[A-Z]{2}$" },
+      "tier": { "type": "string", "enum": ["a_list", "major", "regional", "specialist"] },
+      "festival_type": { "type": "string", "enum": ["film", "documentary", "genre", "short", "international"] },
+      "website": { "type": "string" },
+      "founded_year": { "type": "integer" },
+      "_source": { "type": "string" }
+    }
+  },
+  "Market": {
+    "type": "object",
+    "required": ["id", "name", "city", "country", "market_type"],
+    "additionalProperties": false,
+    "properties": {
+      "id": { "type": "string", "format": "uuid" },
+      "name": { "type": "string", "minLength": 1 },
+      "city": { "type": "string", "minLength": 1 },
+      "country": { "type": "string", "pattern": "^[A-Z]{2}$" },
+      "market_type": { "type": "string", "enum": ["general", "documentary", "genre", "shorts", "series"] },
+      "parent_festival_id": { "type": "string", "format": "uuid" },
+      "website": { "type": "string" },
+      "_source": { "type": "string" }
+    }
+  },
+  "AwardBody": {
+    "type": "object",
+    "required": ["id", "name", "short_name", "country"],
+    "additionalProperties": false,
+    "properties": {
+      "id": { "type": "string", "format": "uuid" },
+      "name": { "type": "string", "minLength": 1 },
+      "short_name": { "type": "string", "minLength": 1 },
+      "country": { "type": "string", "pattern": "^[A-Z]{2}$" },
+      "founded_year": { "type": "integer" },
+      "website": { "type": "string" },
+      "_source": { "type": "string" }
+    }
+  },
+  "AwardCategory": {
+    "type": "object",
+    "required": ["id", "award_body_id", "name"],
+    "additionalProperties": false,
+    "properties": {
+      "id": { "type": "string", "format": "uuid" },
+      "award_body_id": { "type": "string", "format": "uuid" },
+      "name": { "type": "string", "minLength": 1 },
+      "discipline": {
+        "type": "string",
+        "enum": ["directing", "acting", "writing", "craft", "production", "documentary", "international", "other"]
+      },
+      "_source": { "type": "string" }
+    }
+  },
+  "Distributor": {
+    "type": "object",
+    "required": ["id", "name", "territory"],
+    "additionalProperties": false,
+    "properties": {
+      "id": { "type": "string", "format": "uuid" },
+      "name": { "type": "string", "minLength": 1 },
+      "territory": { "type": "array", "items": { "type": "string", "pattern": "^[A-Z]{2}$" }, "minItems": 1 },
+      "type": { "type": "string", "enum": ["major", "indie", "self", "hybrid"] },
+      "website": { "type": "string" },
+      "founded_year": { "type": "integer" },
+      "parent_organisation_id": { "type": "string", "format": "uuid" },
+      "_source": { "type": "string" }
+    }
+  },
+  "Practitioner": {
+    "type": "object",
+    "required": ["id", "name", "role"],
+    "additionalProperties": false,
+    "properties": {
+      "id": { "type": "string", "format": "uuid" },
+      "name": { "type": "string", "minLength": 1 },
+      "role": {
+        "type": "string",
+        "enum": ["booker", "marketer", "sales_agent", "impact_producer", "distributor_exec", "commissioning_exec", "publicist", "programmer"]
+      },
+      "organisation_id": { "type": "string", "format": "uuid" },
+      "territory": { "type": "array", "items": { "type": "string", "pattern": "^[A-Z]{2}$" } },
+      "website": { "type": "string" },
+      "_source": { "type": "string" }
+    }
+  },
+  "Organisation": {
+    "type": "object",
+    "required": ["id", "name", "type"],
+    "additionalProperties": false,
+    "properties": {
+      "id": { "type": "string", "format": "uuid" },
+      "name": { "type": "string", "minLength": 1 },
+      "type": {
+        "type": "string",
+        "enum": ["sales_agent", "funding_body", "marketing_agency", "impact_org", "cinema_chain", "production_company", "platform"]
+      },
+      "territory": { "type": "array", "items": { "type": "string", "pattern": "^[A-Z]{2}$" } },
+      "website": { "type": "string" },
+      "_source": { "type": "string" }
+    }
+  },
+  "Platform": {
+    "type": "object",
+    "required": ["id", "name", "platform_type"],
+    "additionalProperties": false,
+    "properties": {
+      "id": { "type": "string", "minLength": 1 },
+      "name": { "type": "string", "minLength": 1 },
+      "platform_type": {
+        "type": "string",
+        "enum": ["svod", "tvod", "avod", "community_screening", "impact", "educational"]
+      },
+      "territory": { "type": "array", "items": { "type": "string", "pattern": "^[A-Z]{2}$" } },
+      "website": { "type": "string" },
+      "_source": { "type": "string" }
+    }
+  },
+  "Publication": {
+    "type": "object",
+    "required": ["id", "name"],
+    "additionalProperties": false,
+    "properties": {
+      "id": { "type": "string", "format": "uuid" },
+      "name": { "type": "string", "minLength": 1 },
+      "country": { "type": "string", "pattern": "^[A-Z]{2}$" },
+      "publication_type": {
+        "type": "string",
+        "enum": ["trade", "national", "regional", "critic", "blog", "aggregator", "other"]
+      },
+      "website": { "type": "string" },
+      "_source": { "type": "string" }
+    }
+  },
+  "Territory": {
+    "type": "object",
+    "required": ["iso_code", "name"],
+    "additionalProperties": false,
+    "properties": {
+      "iso_code": { "type": "string", "pattern": "^[A-Z]{2}$" },
+      "name": { "type": "string", "minLength": 1 },
+      "market_type": { "type": "string", "enum": ["major", "mid", "small"] },
+      "_source": { "type": "string" }
+    }
+  }
+}

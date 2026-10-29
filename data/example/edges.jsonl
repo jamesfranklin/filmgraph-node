@@ -1,0 +1,5 @@
+{"type": "FUNDED", "from": "0b1e7f3a-1111-4aaa-8bbb-000000000001", "to": "your-fat-friend-2023", "funding_type": "production", "year": 2021}
+{"type": "SCREENED_AT", "from": "your-fat-friend-2023", "to": "0b1e7f3a-1111-4aaa-8bbb-000000000002", "year": 2023, "section": "competition", "premiere_status": "world"}
+{"type": "SCREENED_AT", "from": "mx:716", "to": "0b1e7f3a-1111-4aaa-8bbb-000000000002", "year": 2009}
+{"type": "DISTRIBUTED_BY", "from": "mx:716", "to": "0b1e7f3a-1111-4aaa-8bbb-000000000004", "territory": "GB", "deal_type": "acquisition"}
+{"type": "EXHIBITED_AT", "from": "mx:716", "to": "0b1e7f3a-1111-4aaa-8bbb-000000000003", "date": "2009-06-12", "screenings": 4}

@@ -1,0 +1,28 @@
+{
+  "name": "filmgraph-node",
+  "version": "0.1.0",
+  "description": "FilmGraph node template: Cloudflare Worker + D1, REST + MCP, conformant to the FilmGraph node contract",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:init": "wrangler d1 execute filmgraph --local --file=schema.sql",
+    "db:init:remote": "wrangler d1 execute filmgraph --remote --file=schema.sql",
+    "load": "tsx scripts/load.ts",
+    "issue-key": "tsx scripts/issue-key.ts"
+  },
+  "dependencies": {
+    "hono": "^4.13.14"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261029.1",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.155.0"
+  }
+}

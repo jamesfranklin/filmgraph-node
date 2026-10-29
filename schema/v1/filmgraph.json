@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://filmgraph.org/schema/v1",
+  "title": "FilmGraph Schema v1",
+  "version": "1.1.0",
+  "description": "Open graph schema for the independent film ecosystem",
+  "node_types": { "$ref": "nodes.json" },
+  "edge_types": { "$ref": "edges.json" }
+}
