@@ -6,7 +6,7 @@ export async function manifestData(env: Env, repo: Repo, origin: string) {
   const [{ node_types, edge_types }, film_count, updated] = await Promise.all([
     repo.servedTypes(),
     repo.filmCount(),
-    env.DB.prepare("SELECT value FROM meta WHERE key = 'updated_at'").first<{ value: string }>(),
+    env.db.first<{ value: string }>("SELECT value FROM meta WHERE key = 'updated_at'"),
   ]);
   const capabilities: string[] = [...BASE_CAPABILITIES];
   if (node_types.includes("Venue")) capabilities.push("venues");

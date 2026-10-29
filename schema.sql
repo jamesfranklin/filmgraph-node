@@ -13,7 +13,7 @@ CREATE INDEX IF NOT EXISTS films_title_lc ON films(title_lc);
 CREATE INDEX IF NOT EXISTS films_year ON films(year);
 
 CREATE TABLE IF NOT EXISTS film_external_ids (
-  system   TEXT NOT NULL,              -- tmdb | imdb | mx | letterboxd | wikidata | eidr | ...
+  system   TEXT NOT NULL,              -- tmdb | imdb | letterboxd | wikidata | eidr | any operator key
   value    TEXT NOT NULL,
   film_id  TEXT NOT NULL REFERENCES films(id) ON DELETE CASCADE,
   PRIMARY KEY (system, value)

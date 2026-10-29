@@ -1,7 +1,11 @@
-/** FilmGraph node — Cloudflare Worker entry.
+/** FilmGraph node — the Hono app, host-neutral.
  *
  *  REST per docs/node-contract.md plus the fixed MCP tool set at /mcp. The
  *  manifest and schema paths are always open; everything else honours NODE_AUTH.
+ *
+ *  `createApp` takes a resolver from the host's raw environment (Worker
+ *  bindings, or nothing on Node/Deno) to an `Env` — node config plus a `Db`.
+ *  The entries in entry-*.ts are the only files that know which host this is.
  */
 
 import { Hono } from "hono";
@@ -13,10 +17,14 @@ import { manifestData } from "./manifest";
 import { handleMcp } from "./mcp";
 import { Repo } from "./repo";
 
-type Vars = { principal: Principal | null; repo: Repo };
-const app = new Hono<{ Bindings: Env; Variables: Vars }>();
+type Vars = { env: Env; principal: Principal | null; repo: Repo };
+type App = Hono<{ Variables: Vars }>;
+type Ctx = Context<{ Variables: Vars }>;
 
 const OPEN_PATHS = new Set(["/", "/.well-known/filmgraph", "/schema/version"]);
+
+export function createApp(resolve: (raw: unknown) => Env): App {
+const app: App = new Hono<{ Variables: Vars }>();
 
 app.onError((e, c) => {
   if (e instanceof ApiError) return c.json(e.body(), e.status as 400);
@@ -27,19 +35,21 @@ app.notFound((c) => c.json({ schema_version: SCHEMA_VERSION, error: "not_found",
 
 // Auth: resolve the key (401 if present and bad), gate non-open paths when required.
 app.use("*", async (c, next) => {
-  const principal = await authenticate(c.env, c.req.raw);
-  if (!OPEN_PATHS.has(c.req.path)) requireAuth(c.env, principal);
+  const env = resolve(c.env);
+  c.set("env", env);
+  const principal = await authenticate(env, c.req.raw);
+  if (!OPEN_PATHS.has(c.req.path)) requireAuth(env, principal);
   c.set("principal", principal);
-  c.set("repo", new Repo(c.env, principal));
+  c.set("repo", new Repo(env, principal));
   await next();
 });
 
-const origin = (c: Context<{ Bindings: Env; Variables: Vars }>) => c.env.PUBLIC_URL || new URL(c.req.url).origin;
+const origin = (c: Ctx) => c.get("env").PUBLIC_URL || new URL(c.req.url).origin;
 const page = (c: Context) => ({ page: Number(c.req.query("page") ?? 1) || 1, limit: Number(c.req.query("limit") ?? 20) || 20 });
 
 // --- Meta --------------------------------------------------------------------
-app.get("/", (c) => c.json(envelope({ status: "ok", service: "FilmGraph node", node_id: c.env.NODE_ID })));
-app.get("/.well-known/filmgraph", async (c) => c.json(envelope(await manifestData(c.env, c.get("repo"), origin(c)))));
+app.get("/", (c) => c.json(envelope({ status: "ok", service: "FilmGraph node", node_id: c.get("env").NODE_ID })));
+app.get("/.well-known/filmgraph", async (c) => c.json(envelope(await manifestData(c.get("env"), c.get("repo"), origin(c)))));
 app.get("/schema/version", (c) => c.json(envelope(SCHEMA_VERSION)));
 
 // --- Films -------------------------------------------------------------------
@@ -50,7 +60,7 @@ app.get("/films/search", async (c) => {
   return c.json(paginate(await c.get("repo").searchFilms(q, 200), p, limit));
 });
 
-const EXT = ["tmdb", "imdb", "letterboxd", "wikidata", "eidr", "mx"];
+const EXT = ["tmdb", "imdb", "letterboxd", "wikidata", "eidr"];
 app.get("/films/resolve", async (c) => {
   const ext: Record<string, string> = {};
   for (const k of EXT) {
@@ -67,7 +77,7 @@ app.get("/films/resolve", async (c) => {
   return c.json(envelope({ items: await c.get("repo").resolveFilm(title, year, ext) }));
 });
 
-const filmOr404 = async (c: Context<{ Bindings: Env; Variables: Vars }>) => {
+const filmOr404 = async (c: Ctx) => {
   const ref = c.req.param("ref")!;
   const film = await c.get("repo").resolveRef(ref);
   if (!film) throw new ApiError("not_found", `Film ${ref} not found`);
@@ -79,11 +89,11 @@ app.get("/films/:ref", async (c) => c.json(envelope(await filmOr404(c))));
 app.get("/films/:ref/graph", async (c) => {
   const film = await filmOr404(c);
   const body = await c.get("repo").filmGraph(film);
-  return c.json(envelope({ node: c.env.NODE_ID, ...body, generated_at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z") }));
+  return c.json(envelope({ node: c.get("env").NODE_ID, ...body, generated_at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z") }));
 });
 
 // v1 per-edge views, derived from the composite so they can't disagree with it.
-const edgeView = (types: string[]) => async (c: Context<{ Bindings: Env; Variables: Vars }>) => {
+const edgeView = (types: string[]) => async (c: Ctx) => {
   const film = await filmOr404(c);
   const { edges } = await c.get("repo").filmGraph(film);
   const items = types.flatMap((t) => (edges[t] ?? []).map((e) => e.target));
@@ -115,6 +125,7 @@ app.get("/venues/:id/films", async (c) => {
 });
 
 // --- MCP ---------------------------------------------------------------------
-app.all("/mcp", (c) => handleMcp(c.env, c.get("repo"), c.req.raw));
+app.all("/mcp", (c) => handleMcp(c.get("env"), c.get("repo"), c.req.raw));
 
-export default app;
+return app;
+}

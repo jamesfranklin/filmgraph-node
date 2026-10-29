@@ -1,5 +1,5 @@
 name = "filmgraph-node"
-main = "src/index.ts"
+main = "src/entry-worker.ts"
 compatibility_date = "2026-10-01"
 
 # --- Node identity: edit these for your deployment ---------------------------

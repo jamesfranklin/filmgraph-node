@@ -25,17 +25,13 @@ export async function authenticate(env: Env, req: Request): Promise<Principal | 
   const key = extractKey(req);
   if (!key) return null;
   const hash = await sha256Hex(key);
-  const row = await env.DB.prepare(
+  const row = await env.db.first<{ label: string; scope: string | null }>(
     "SELECT label, scope FROM api_keys WHERE key_hash = ?1 AND revoked_at IS NULL",
-  )
-    .bind(hash)
-    .first<{ label: string; scope: string | null }>();
+    hash,
+  );
   if (!row) throw new ApiError("unauthorized", "Valid API key required");
   // Fire-and-forget usage stamp; failures are irrelevant to the request.
-  env.DB.prepare("UPDATE api_keys SET last_used_at = strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE key_hash = ?1")
-    .bind(hash)
-    .run()
-    .catch(() => {});
+  env.db.run("UPDATE api_keys SET last_used_at = strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE key_hash = ?1", hash).catch(() => {});
   return { label: row.label, scope: row.scope ? new Set(JSON.parse(row.scope) as string[]) : null };
 }
 

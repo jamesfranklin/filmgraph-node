@@ -5,32 +5,24 @@
  *   npm run issue-key -- --label "Partner app" --scope slug1,tmdb:2 --remote
  *   npm run issue-key -- --revoke <key> --remote
  *   npm run issue-key -- --list --remote
+ *   FILMGRAPH_DB=file:./node.db npm run issue-key -- --label dev   # libSQL / SQLite file
  *
  * The plaintext key is printed ONCE; only its SHA-256 is stored.
  */
 
-import { execFileSync } from "node:child_process";
+import { target } from "./_target";
 import { createHash, randomBytes } from "node:crypto";
 
 const args: string[] = process.argv.slice(2);
 const flag = (n: string): string | undefined => (args.includes(n) ? args[args.indexOf(n) + 1] : undefined);
-const remote = args.includes("--remote");
-const envName = flag("--env");
 const q = (v: unknown) => `'${String(v).replace(/'/g, "''")}'`;
-
-const run = (sql: string, json = false) => {
-  const cmd = ["wrangler", "d1", "execute", "filmgraph", remote ? "--remote" : "--local", `--command=${sql}`, "-y"];
-  if (envName) cmd.push("--env", envName);
-  if (json) cmd.push("--json");
-  return execFileSync("npx", cmd, { encoding: "utf8", stdio: json ? ["ignore", "pipe", "inherit"] : "inherit" });
-};
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
+const t = await target(args);
 
 if (args.includes("--list")) {
-  const out = run("SELECT label, scope, created_at, revoked_at, last_used_at FROM api_keys ORDER BY created_at", true);
-  console.table(JSON.parse(out)[0].results);
+  console.table(await t.query("SELECT label, scope, created_at, revoked_at, last_used_at FROM api_keys ORDER BY created_at"));
 } else if (flag("--revoke")) {
-  run(`UPDATE api_keys SET revoked_at = strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE key_hash = ${q(sha(flag("--revoke")!))}`);
+  await t.exec(`UPDATE api_keys SET revoked_at = strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE key_hash = ${q(sha(flag("--revoke")!))}`);
   console.log("revoked");
 } else {
   const label = flag("--label");
@@ -50,12 +42,12 @@ if (args.includes("--list")) {
         return `slug = ${q(r.toLowerCase())}`;
       })
       .join(" OR ");
-    const out = run(`SELECT id FROM films WHERE ${where}`, true);
-    const ids = (JSON.parse(out)[0].results as { id: string }[]).map((r) => r.id);
+    const ids = (await t.query<{ id: string }>(`SELECT id FROM films WHERE ${where}`)).map((r) => r.id);
     if (ids.length !== scopeRefs.length) console.warn(`warning: ${scopeRefs.length} refs → ${ids.length} films`);
     scopeSql = q(JSON.stringify(ids));
   }
   const key = `fg_${randomBytes(24).toString("base64url")}`;
-  run(`INSERT INTO api_keys (key_hash, label, scope) VALUES (${q(sha(key))}, ${q(label)}, ${scopeSql})`);
+  await t.exec(`INSERT INTO api_keys (key_hash, label, scope) VALUES (${q(sha(key))}, ${q(label)}, ${scopeSql})`);
   console.log(`\nKey for "${label}" (shown once):\n\n  ${key}\n`);
 }
+t.close();

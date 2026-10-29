@@ -1,4 +1,4 @@
-/** D1 data access. Everything the REST routes and MCP tools need, in one place,
+/** Data access over the Db interface (src/db.ts). Everything the REST routes and MCP tools need, in one place,
  *  so the two surfaces cannot drift. */
 
 import type { Env } from "./env";
@@ -20,7 +20,7 @@ export class Repo {
   constructor(private env: Env, private principal: Principal | null) {}
 
   private get db() {
-    return this.env.DB;
+    return this.env.db;
   }
 
   /** Scope filter: a film outside the key's scope does not exist (404, not 403). */
@@ -34,31 +34,23 @@ export class Repo {
     const r = parseFilmRef(ref);
     let row: FilmRow | null = null;
     if (r.kind === "uuid") {
-      row = await this.db.prepare("SELECT id, doc FROM films WHERE id = ?1").bind(r.value).first<FilmRow>();
+      row = await this.db.first<FilmRow>("SELECT id, doc FROM films WHERE id = ?1", r.value);
     } else if (r.kind === "slug") {
-      row = await this.db.prepare("SELECT id, doc FROM films WHERE slug = ?1").bind(r.value).first<FilmRow>();
+      row = await this.db.first<FilmRow>("SELECT id, doc FROM films WHERE slug = ?1", r.value);
     } else if (r.kind === "external") {
-      row = await this.db
-        .prepare(
-          "SELECT f.id, f.doc FROM film_external_ids x JOIN films f ON f.id = x.film_id WHERE x.system = ?1 AND x.value = ?2",
-        )
-        .bind(r.system, r.value)
-        .first<FilmRow>();
+      row = await this.db.first<FilmRow>("SELECT f.id, f.doc FROM film_external_ids x JOIN films f ON f.id = x.film_id WHERE x.system = ?1 AND x.value = ?2", r.system, r.value);
     }
     return this.visible(parseFilm(row));
   }
 
   async searchFilms(q: string, limit = 50): Promise<Film[]> {
     const like = `%${q.toLowerCase().replace(/[%_]/g, "")}%`;
-    const { results } = await this.db
-      .prepare("SELECT id, doc FROM films WHERE title_lc LIKE ?1 ORDER BY year DESC, title_lc LIMIT ?2")
-      .bind(like, Math.min(limit, 200))
-      .all<FilmRow>();
+    const results = await this.db.all<FilmRow>("SELECT id, doc FROM films WHERE title_lc LIKE ?1 ORDER BY year DESC, title_lc LIMIT ?2", like, Math.min(limit, 200));
     return results.map((r) => parseFilm(r)!).filter((f) => inScope(this.principal, f.id));
   }
 
   async filmCount(): Promise<number> {
-    const row = await this.db.prepare("SELECT COUNT(*) AS n FROM films").first<{ n: number }>();
+    const row = await this.db.first<{ n: number }>("SELECT COUNT(*) AS n FROM films");
     return row?.n ?? 0;
   }
 
@@ -89,10 +81,7 @@ export class Repo {
         add(await this.resolveRef(slug), 0.8, "slug");
         // Same title, same year, different film: slug-2, slug-3, ... Surface them
         // so the consumer can disambiguate rather than silently taking the first.
-        const { results } = await this.db
-          .prepare("SELECT id, doc FROM films WHERE slug GLOB ?1 ORDER BY slug")
-          .bind(`${slug}-[0-9]*`)
-          .all<FilmRow>();
+        const results = await this.db.all<FilmRow>("SELECT id, doc FROM films WHERE slug GLOB ?1 ORDER BY slug", `${slug}-[0-9]*`);
         for (const r of results) add(this.visible(parseFilm(r)), 0.7, "slug_collision");
         const base = splitSlug(slug)![0];
         for (const dy of [-1, 1]) add(await this.resolveRef(`${base}-${year + dy}`), 0.6, "slug_year_adjacent");
@@ -104,16 +93,11 @@ export class Repo {
   // --- Composite document -----------------------------------------------------
 
   async filmGraph(film: Film) {
-    const { results } = await this.db
-      .prepare(
-        `SELECT e.id, e.type, e.from_id, e.to_id, e.props,
+    const results = await this.db.all<{ id: string; type: string; from_id: string; to_id: string; props: string; far_id: string }>(`SELECT e.id, e.type, e.from_id, e.to_id, e.props,
                 CASE WHEN e.from_id = ?1 THEN e.to_id ELSE e.from_id END AS far_id
            FROM edges e
           WHERE e.from_id = ?1 OR e.to_id = ?1
-          ORDER BY e.type, e.id`,
-      )
-      .bind(film.id)
-      .all<{ id: string; type: string; from_id: string; to_id: string; props: string; far_id: string }>();
+          ORDER BY e.type, e.id`, film.id);
 
     // Fetch far nodes in one go (nodes table + films table for film↔film edges).
     const farIds = [...new Set(results.map((r) => r.far_id))];
@@ -122,11 +106,11 @@ export class Repo {
       const chunk = farIds.slice(i, i + 50);
       const marks = chunk.map((_, j) => `?${j + 1}`).join(",");
       const [n, f] = await Promise.all([
-        this.db.prepare(`SELECT id, type, doc FROM nodes WHERE id IN (${marks})`).bind(...chunk).all<{ id: string; type: string; doc: string }>(),
-        this.db.prepare(`SELECT id, doc FROM films WHERE id IN (${marks})`).bind(...chunk).all<FilmRow>(),
+        this.db.all<{ id: string; type: string; doc: string }>(`SELECT id, type, doc FROM nodes WHERE id IN (${marks})`, ...chunk),
+        this.db.all<FilmRow>(`SELECT id, doc FROM films WHERE id IN (${marks})`, ...chunk),
       ]);
-      for (const r of n.results) far.set(r.id, { ...(JSON.parse(r.doc) as Node), _type: r.type });
-      for (const r of f.results) far.set(r.id, { ...(JSON.parse(r.doc) as Node), _type: "Film" });
+      for (const r of n) far.set(r.id, { ...(JSON.parse(r.doc) as Node), _type: r.type });
+      for (const r of f) far.set(r.id, { ...(JSON.parse(r.doc) as Node), _type: "Film" });
     }
 
     const edges: Record<string, Array<{ edge: Record<string, unknown>; target: Node }>> = {};
@@ -145,48 +129,38 @@ export class Repo {
 
   async servedTypes(): Promise<{ node_types: string[]; edge_types: string[] }> {
     const [n, e, films] = await Promise.all([
-      this.db.prepare("SELECT DISTINCT type FROM nodes ORDER BY type").all<{ type: string }>(),
-      this.db.prepare("SELECT DISTINCT type FROM edges ORDER BY type").all<{ type: string }>(),
+      this.db.all<{ type: string }>("SELECT DISTINCT type FROM nodes ORDER BY type"),
+      this.db.all<{ type: string }>("SELECT DISTINCT type FROM edges ORDER BY type"),
       this.filmCount(),
     ]);
-    const node_types = n.results.map((r) => r.type);
+    const node_types = n.map((r) => r.type);
     if (films > 0 || node_types.length === 0) node_types.unshift("Film");
-    return { node_types, edge_types: e.results.map((r) => r.type) };
+    return { node_types, edge_types: e.map((r) => r.type) };
   }
 
   // --- Venues (optional capability) ------------------------------------------
 
   async getNode(type: string, id: string): Promise<Node | null> {
-    const row = await this.db
-      .prepare("SELECT doc FROM nodes WHERE id = ?1 AND type = ?2")
-      .bind(id, type)
-      .first<{ doc: string }>();
+    const row = await this.db.first<{ doc: string }>("SELECT doc FROM nodes WHERE id = ?1 AND type = ?2", id, type);
     return row ? (JSON.parse(row.doc) as Node) : null;
   }
 
   async searchNodes(type: string, q: string, country?: string, limit = 50): Promise<Node[]> {
     const like = `%${q.toLowerCase().replace(/[%_]/g, "")}%`;
-    const stmt = country
-      ? this.db
-          .prepare("SELECT doc FROM nodes WHERE type = ?1 AND name_lc LIKE ?2 AND country = ?3 ORDER BY name_lc LIMIT ?4")
-          .bind(type, like, country.toUpperCase(), Math.min(limit, 200))
-      : this.db
-          .prepare("SELECT doc FROM nodes WHERE type = ?1 AND name_lc LIKE ?2 ORDER BY name_lc LIMIT ?3")
-          .bind(type, like, Math.min(limit, 200));
-    const { results } = await stmt.all<{ doc: string }>();
+    const results = country
+      ? await this.db.all<{ doc: string }>(
+          "SELECT doc FROM nodes WHERE type = ?1 AND name_lc LIKE ?2 AND country = ?3 ORDER BY name_lc LIMIT ?4",
+          type, like, country.toUpperCase(), Math.min(limit, 200),
+        )
+      : await this.db.all<{ doc: string }>("SELECT doc FROM nodes WHERE type = ?1 AND name_lc LIKE ?2 ORDER BY name_lc LIMIT ?3", type, like, Math.min(limit, 200));
     return results.map((r) => JSON.parse(r.doc) as Node);
   }
 
   async filmsForNode(nodeId: string): Promise<Film[]> {
-    const { results } = await this.db
-      .prepare(
-        `SELECT DISTINCT f.id, f.doc FROM edges e
+    const results = await this.db.all<FilmRow>(`SELECT DISTINCT f.id, f.doc FROM edges e
            JOIN films f ON f.id = CASE WHEN e.from_id = ?1 THEN e.to_id ELSE e.from_id END
           WHERE e.from_id = ?1 OR e.to_id = ?1
-          ORDER BY f.year DESC LIMIT 500`,
-      )
-      .bind(nodeId)
-      .all<FilmRow>();
+          ORDER BY f.year DESC LIMIT 500`, nodeId);
     return results.map((r) => parseFilm(r)!).filter((f) => inScope(this.principal, f.id));
   }
 }

@@ -1,8 +1,9 @@
 /**
- * Load a FilmGraph dataset into D1.
+ * Load a FilmGraph dataset into the node's database.
  *
  *   npm run load -- data/example            # local D1 (wrangler dev)
  *   npm run load -- data/example --remote   # production D1
+ *   FILMGRAPH_DB=file:./node.db npm run load -- data/example   # libSQL / SQLite file (Node, Deno hosts)
  *   npm run load -- data/example --sql out.sql   # just write the SQL
  *
  * Reads from the directory:
@@ -18,7 +19,7 @@
  * wholesale: films, nodes and edges are truncated first; api_keys are kept.
  */
 
-import { execFileSync } from "node:child_process";
+import { target as sqlTarget } from "./_target";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
@@ -32,9 +33,7 @@ if (!dir) {
   process.exit(2);
 }
 const dataDir: string = dir as string;
-const remote = args.includes("--remote");
 const sqlOut = args.includes("--sql") ? args[args.indexOf("--sql") + 1] : null;
-const envName = args.includes("--env") ? args[args.indexOf("--env") + 1] : null;
 
 const readJsonl = (name: string): Record<string, unknown>[] => {
   const p = join(dataDir, name);
@@ -205,6 +204,7 @@ writeFileSync(target, sql);
 console.log(`${films.length} films, ${nodeIds.size} nodes, ${stmts.filter((s) => s.startsWith("INSERT INTO edges")).length} edges → ${target}`);
 if (sqlOut) process.exit(0);
 
-const wrangler = ["d1", "execute", "filmgraph", remote ? "--remote" : "--local", `--file=${target}`, "-y"];
-if (envName) wrangler.push("--env", envName);
-execFileSync("npx", ["wrangler", ...wrangler], { stdio: "inherit" });
+const t = await sqlTarget(args);
+console.log(`loading into ${t.describe}`);
+await t.exec(sql);
+t.close();

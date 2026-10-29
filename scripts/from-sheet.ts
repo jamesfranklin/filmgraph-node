@@ -7,7 +7,7 @@
  * as CSV with these exact names) and writes films.jsonl / nodes.jsonl /
  * edges.jsonl to the output directory. Run `npm run load -- <out>` after.
  *
- *   films.csv      title, year, title_en, original_title, tmdb, imdb, mx,
+ *   films.csv      title, year, title_en, original_title, tmdb, imdb, wikidata,
  *                  letterboxd, wikidata, origin_country, language, genres,
  *                  runtime_mins, budget_tier, keywords, ref
  *                  - `ref` is YOUR handle for this film (any short unique
@@ -82,7 +82,7 @@ const warn: string[] = [];
 const refToId = new Map<string, string>();
 const films: Record<string, unknown>[] = [];
 const filmRows = read("films.csv") ?? [];
-const KNOWN_FILM = new Set(["ref", "title", "year", "title_en", "original_title", "tmdb", "imdb", "mx", "letterboxd", "wikidata", "eidr", "origin_country", "language", "genres", "runtime_mins", "budget_tier", "keywords", "id"]);
+const KNOWN_FILM = new Set(["ref", "title", "year", "title_en", "original_title", "tmdb", "imdb", "letterboxd", "wikidata", "eidr", "origin_country", "language", "genres", "runtime_mins", "budget_tier", "keywords", "id"]);
 for (const [i, r] of filmRows.entries()) {
   const where = `films.csv:${i + 2}`;
   for (const k of Object.keys(r)) if (!KNOWN_FILM.has(k) && r[k]) warn.push(`${where}: ignoring column '${k}'`);
@@ -94,7 +94,7 @@ for (const [i, r] of filmRows.entries()) {
   if (r.title_en !== undefined && r.title_en !== "") f.title_en = r.title_en.toLowerCase() === "null" ? null : r.title_en;
   if (r.original_title) f.original_title = r.original_title;
   const ext: Record<string, string | number> = {};
-  for (const k of ["tmdb", "mx"]) if (num(r[k]) !== undefined) ext[k] = num(r[k])!;
+  for (const k of ["tmdb"]) if (num(r[k]) !== undefined) ext[k] = num(r[k])!;
   for (const k of ["imdb", "letterboxd", "wikidata", "eidr"]) if (r[k]) ext[k] = r[k];
   if (Object.keys(ext).length) f.external_ids = ext;
   if (r.origin_country) f.origin_country = list(r.origin_country).map((c) => c.toUpperCase());

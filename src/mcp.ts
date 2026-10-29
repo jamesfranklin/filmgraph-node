@@ -67,7 +67,7 @@ export function toolDefinitions(env: Env, hasVenues: boolean): ToolDef[] {
     },
     {
       name: "resolve_film",
-      description: `Find the film ${where} matching a title+year or known external ids (tmdb, imdb, mx, …). Returns candidates best-first with confidence (1.0 external id, 0.8 exact slug, 0.6 slug with year ±1). Use this to map a film you know from elsewhere onto this node.`,
+      description: `Find the film ${where} matching a title+year or known external ids (tmdb, imdb, …). Returns candidates best-first with confidence (1.0 external id, 0.8 exact slug, 0.6 slug with year ±1). Use this to map a film you know from elsewhere onto this node.`,
       inputSchema: {
         type: "object",
         properties: {
@@ -136,7 +136,7 @@ export async function callTool(env: Env, repo: Repo, name: string, args: Record<
     }
     case "resolve_film": {
       const ext: Record<string, string> = {};
-      for (const k of ["tmdb", "imdb", "letterboxd", "wikidata", "eidr", "mx"]) {
+      for (const k of ["tmdb", "imdb", "letterboxd", "wikidata", "eidr"]) {
         if (args[k] !== undefined && args[k] !== null && args[k] !== "") ext[k] = String(args[k]);
       }
       if (args.external_ids && typeof args.external_ids === "object") {

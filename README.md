@@ -1,9 +1,17 @@
 # filmgraph-node
 
-A ready-to-deploy **FilmGraph node**: Cloudflare Worker + D1, serving the
+A ready-to-deploy **FilmGraph node**: one small Hono app over SQLite-shaped
+storage, serving the
 [FilmGraph node contract](https://github.com/jamesfranklin/FilmGraph/blob/main/docs/node-contract.md)
 over REST and MCP. Load your films as JSONL, issue keys, deploy. No Neo4j, no
-servers.
+servers to babysit.
+
+It is host-neutral. The same code runs as a **Cloudflare Worker on D1**, on
+**Node** (any container host — Scaleway, Koyeb, Fly, a VPS) or on **Deno**
+(Deno Deploy, Bunny Edge Scripting) over **libSQL** — Turso, Bunny Database, a
+libSQL server, or a plain SQLite file. Pick the host your data-residency story
+needs; nothing in the node changes. The conformance suite passes identically on
+D1 and on a SQLite file.
 
 Use it when you hold a bounded, slowly-changing set of films — a funder's
 slate, a distributor's catalogue, a festival's programme — and want agents and
@@ -22,8 +30,11 @@ in that system's stack instead; the contract is the same either way.
 | Auth | `X-API-Key` or `Authorization: Bearer` | Per-consumer keys, hashed at rest, optionally scoped to a film list |
 
 REST and MCP share one data layer (`src/repo.ts`), so they cannot disagree.
+`src/db.ts` is the only storage boundary — four calls (`first`, `all`, `run`,
+`exec`) with adapters for D1 and libSQL; `src/entry-*.ts` are the only files
+that know which host they are on.
 
-## Deploy in ten minutes
+## Deploy in ten minutes (Cloudflare)
 
 ```bash
 git clone https://github.com/jamesfranklin/filmgraph-node my-node && cd my-node
@@ -58,10 +69,33 @@ Custom domain: add a `routes = [{ pattern = "filmgraph.example.org", custom_doma
 line (see the commented `[env.mynode]` block in `wrangler.toml` for a
 complete second-environment example; deploy it with `npm run deploy -- --env mynode`).
 
+## Deploy on Node or Deno (EU hosts, your own box)
+
+The node reads its identity from environment variables (the same names as the
+Worker's `[vars]`) and its database from `FILMGRAPH_DB` — `file:./node.db`
+for SQLite on disk, `libsql://…` + `FILMGRAPH_DB_TOKEN` for Turso / Bunny
+Database / any libSQL server. The scripts target the same variable, so one
+workflow covers every host:
+
+```bash
+export FILMGRAPH_DB=file:./node.db          # or libsql://your-db.turso.io + FILMGRAPH_DB_TOKEN
+export NODE_ID=mynode NODE_NAME="Example Archive FilmGraph node" \
+       OPERATOR_NAME="Example Archive" OPERATOR_URL=https://example.org \
+       NODE_LAYER=1 NODE_AUTH=required PUBLIC_URL=https://filmgraph.example.org
+npm run db:init
+npm run load -- data/my-films
+npm run issue-key -- --label "Our staff"
+npm run start                               # Node: @hono/node-server on $PORT (8787)
+```
+
+Deno (and hosts that run Deno, such as Bunny Edge Scripting):
+`deno run -A src/entry-deno.ts` with the same environment. A container is just
+`npm ci && npm run start` behind whatever TLS terminator the host provides.
+
 ## Local development
 
 ```bash
-npm run db:init                 # local D1
+npm run db:init                 # local D1 (or FILMGRAPH_DB=file:… for a SQLite file)
 npm run load -- data/example    # 5 films, 4 nodes, 5 edges
 npm run issue-key -- --label dev
 npm run dev                     # http://127.0.0.1:8787
