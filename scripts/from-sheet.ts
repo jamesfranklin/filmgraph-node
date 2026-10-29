@@ -1,7 +1,7 @@
 /**
  * Turn a spreadsheet export into loader-ready JSONL.
  *
- *   npm run from-sheet -- data/docsociety/intake data/docsociety
+ *   npm run from-sheet -- data/example/intake data/example
  *
  * Reads CSVs from the intake directory (export each tab of the intake sheet
  * as CSV with these exact names) and writes films.jsonl / nodes.jsonl /

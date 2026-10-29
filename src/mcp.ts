@@ -10,7 +10,7 @@ import { manifestData } from "./manifest";
 
 /** Newest revision spoken; `server/discover` leads with it. 2026-07-28
  *  dropped the initialize handshake for per-request `_meta`; the two older
- *  revisions keep `initialize`. Both doors stay open, as on api.assemble.film. */
+ *  revisions keep `initialize`. Both doors stay open. */
 export const MCP_PROTOCOL_VERSION = "2026-07-28";
 const SUPPORTED_PROTOCOL_VERSIONS = [MCP_PROTOCOL_VERSION, "2025-11-25", "2025-06-18"] as const;
 const UNSUPPORTED_PROTOCOL_VERSION = -32022;

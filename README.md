@@ -55,8 +55,8 @@ FILMGRAPH_NODE_URL=https://filmgraph.example.org FILMGRAPH_NODE_KEY=fg_… pytes
 ```
 
 Custom domain: add a `routes = [{ pattern = "filmgraph.example.org", custom_domain = true }]`
-line (see the commented `[env.docsociety]` block in `wrangler.toml` for a
-complete second-environment example; deploy it with `npm run deploy -- --env docsociety`).
+line (see the commented `[env.mynode]` block in `wrangler.toml` for a
+complete second-environment example; deploy it with `npm run deploy -- --env mynode`).
 
 ## Local development
 
@@ -79,7 +79,7 @@ npm run from-sheet -- data/my-node/intake data/my-node   # films.csv, festivals.
 npm run load -- data/my-node --remote
 ```
 
-`data/docsociety/intake/` is a filled-in template; the column reference is at
+`data/example/intake/` is a filled-in template; the column reference is at
 the top of `scripts/from-sheet.ts`. Under the hood it produces the three files
 below.
 

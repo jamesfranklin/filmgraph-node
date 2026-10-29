@@ -1,8 +1,8 @@
 /**
  * Issue (or revoke) an API key for a consumer.
  *
- *   npm run issue-key -- --label "Doc Society staff"                 # all films, local D1
- *   npm run issue-key -- --label "Glimmer app" --scope slug1,tmdb:2 --remote
+ *   npm run issue-key -- --label "Archive staff"                 # all films, local D1
+ *   npm run issue-key -- --label "Partner app" --scope slug1,tmdb:2 --remote
  *   npm run issue-key -- --revoke <key> --remote
  *   npm run issue-key -- --list --remote
  *

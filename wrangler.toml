@@ -21,22 +21,23 @@ database_name = "filmgraph"
 # Replace after `wrangler d1 create filmgraph`
 database_id = "00000000-0000-0000-0000-000000000000"
 
-# --- Doc Society -------------------------------------------------------------
-# Deploy: npm run deploy -- --env docsociety   (after `wrangler d1 create filmgraph-docsociety`)
-[env.docsociety]
-name = "filmgraph-docsociety"
-routes = [{ pattern = "filmgraph.docsociety.org", custom_domain = true }]
-
-[env.docsociety.vars]
-NODE_ID = "docsociety"
-NODE_NAME = "Doc Society FilmGraph node"
-OPERATOR_NAME = "Doc Society"
-OPERATOR_URL = "https://docsociety.org"
-NODE_LAYER = "1"
-NODE_AUTH = "required"
-PUBLIC_URL = "https://filmgraph.docsociety.org"
-
-[[env.docsociety.d1_databases]]
-binding = "DB"
-database_name = "filmgraph-docsociety"
-database_id = "00000000-0000-0000-0000-000000000000"
+# --- A second deployment ------------------------------------------------------
+# One worker per operator: copy this block, name it, point it at its own D1.
+# Deploy: npm run deploy -- --env mynode   (after `wrangler d1 create filmgraph-mynode`)
+# [env.mynode]
+# name = "filmgraph-mynode"
+# routes = [{ pattern = "filmgraph.example.org", custom_domain = true }]
+#
+# [env.mynode.vars]
+# NODE_ID = "mynode"
+# NODE_NAME = "Example Archive FilmGraph node"
+# OPERATOR_NAME = "Example Archive"
+# OPERATOR_URL = "https://example.org"
+# NODE_LAYER = "1"
+# NODE_AUTH = "required"
+# PUBLIC_URL = "https://filmgraph.example.org"
+#
+# [[env.mynode.d1_databases]]
+# binding = "DB"
+# database_name = "filmgraph-mynode"
+# database_id = "00000000-0000-0000-0000-000000000000"
