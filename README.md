@@ -71,6 +71,18 @@ npm run dev                     # http://127.0.0.1:8787
 
 ## Data format
 
+Most operators will start from a spreadsheet, not JSONL. Export each tab as
+CSV into a folder and convert:
+
+```bash
+npm run from-sheet -- data/my-node/intake data/my-node   # films.csv, festivals.csv, edges.csv … → JSONL
+npm run load -- data/my-node --remote
+```
+
+`data/docsociety/intake/` is a filled-in template; the column reference is at
+the top of `scripts/from-sheet.ts`. Under the hood it produces the three files
+below.
+
 Three JSONL files in one directory. Every record is validated against the
 FilmGraph schema (`schema/v1/`, vendored from the FilmGraph repo) **before**
 anything is written; one bad line fails the whole load, with line numbers.

@@ -21,12 +21,22 @@ database_name = "filmgraph"
 # Replace after `wrangler d1 create filmgraph`
 database_id = "00000000-0000-0000-0000-000000000000"
 
-# Doc Society deployment example:
-# [env.docsociety]
-# name = "filmgraph-docsociety"
-# routes = [{ pattern = "filmgraph.docsociety.org", custom_domain = true }]
-# vars = { NODE_ID = "docsociety", NODE_NAME = "Doc Society FilmGraph node", OPERATOR_NAME = "Doc Society", OPERATOR_URL = "https://docsociety.org", NODE_LAYER = "1", NODE_AUTH = "required", PUBLIC_URL = "https://filmgraph.docsociety.org" }
-# [[env.docsociety.d1_databases]]
-# binding = "DB"
-# database_name = "filmgraph-docsociety"
-# database_id = "..."
+# --- Doc Society -------------------------------------------------------------
+# Deploy: npm run deploy -- --env docsociety   (after `wrangler d1 create filmgraph-docsociety`)
+[env.docsociety]
+name = "filmgraph-docsociety"
+routes = [{ pattern = "filmgraph.docsociety.org", custom_domain = true }]
+
+[env.docsociety.vars]
+NODE_ID = "docsociety"
+NODE_NAME = "Doc Society FilmGraph node"
+OPERATOR_NAME = "Doc Society"
+OPERATOR_URL = "https://docsociety.org"
+NODE_LAYER = "1"
+NODE_AUTH = "required"
+PUBLIC_URL = "https://filmgraph.docsociety.org"
+
+[[env.docsociety.d1_databases]]
+binding = "DB"
+database_name = "filmgraph-docsociety"
+database_id = "00000000-0000-0000-0000-000000000000"

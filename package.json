@@ -12,6 +12,7 @@
     "db:init": "wrangler d1 execute filmgraph --local --file=schema.sql",
     "db:init:remote": "wrangler d1 execute filmgraph --remote --file=schema.sql",
     "load": "tsx scripts/load.ts",
+    "from-sheet": "tsx scripts/from-sheet.ts",
     "issue-key": "tsx scripts/issue-key.ts"
   },
   "dependencies": {
